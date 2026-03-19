@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { subscribeToCandidates, sendReaction, cleanupOldReactions, subscribeToSystemConfig, sendSound, cleanupOldSounds } from "../services/voteService";
+import { subscribeToCandidates, sendReaction, subscribeToSystemConfig, sendSound } from "../services/voteService";
 import pixelRabbit from "../assets/pixel_rabbit.png";
 import partyRabbit from "../assets/party_rabbit.png";
 import type { Candidate } from "../types";
@@ -32,14 +32,9 @@ export const DashboardPage: React.FC = () => {
             setAllowReactions(config.allowReactions);
             setAllowSounds(config.allowSounds);
         });
-        const cleanupInterval = setInterval(() => {
-            cleanupOldReactions();
-            cleanupOldSounds();
-        }, 30000);
         return () => {
             unsubscribe();
             unsubscribeConfig();
-            clearInterval(cleanupInterval);
         };
     }, []);
 

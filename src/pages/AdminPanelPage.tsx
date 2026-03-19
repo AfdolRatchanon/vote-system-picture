@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
-    getCandidates,
     resetAllVotes,
     deleteCandidate,
     seedCandidates,
@@ -15,6 +14,8 @@ import {
     toggleShowResults,
     toggleReactions,
     toggleSounds,
+    cleanupOldReactions,
+    cleanupOldSounds,
 } from "../services/voteService";
 import type { Candidate } from "../types";
 import { Button } from "../components/ui/Button";
@@ -64,25 +65,25 @@ export const AdminPanelPage: React.FC = () => {
                 setAllowSounds(config.allowSounds);
             });
 
+            // Only admin client runs cleanup (prevents all dashboard viewers from doing it)
+            const cleanupInterval = setInterval(() => {
+                cleanupOldReactions();
+                cleanupOldSounds();
+            }, 30000);
+
             return () => {
                 unsubscribeCandidates();
                 unsubscribeConfig();
+                clearInterval(cleanupInterval);
             };
         }
     }, [isAdmin]);
-
-    const fetchCandidates = async () => {
-        // Kept for manual refresh if needed, but subscription handles updates
-        const data = await getCandidates();
-        setCandidates(data);
-    };
 
     const handleResetVotes = async () => {
         if (window.confirm("Are you sure you want to reset all votes? This cannot be undone.")) {
             setLoading(true);
             try {
                 await resetAllVotes();
-                await fetchCandidates();
                 alert("All votes have been reset.");
             } catch (error) {
                 console.error("Error resetting votes:", error);
@@ -99,7 +100,6 @@ export const AdminPanelPage: React.FC = () => {
             try {
                 await resetAllVotes(); // Also reset votes as requested
                 await deleteAllCandidates();
-                await fetchCandidates();
                 alert("All candidates deleted and votes reset.");
             } catch (error) {
                 console.error("Error deleting all candidates:", error);
@@ -115,7 +115,6 @@ export const AdminPanelPage: React.FC = () => {
             setLoading(true);
             try {
                 await deleteCandidate(id);
-                await fetchCandidates();
             } catch (error) {
                 console.error("Error deleting candidate:", error);
                 alert("Failed to delete candidate.");
@@ -130,7 +129,6 @@ export const AdminPanelPage: React.FC = () => {
             setLoading(true);
             try {
                 await seedCandidates();
-                await fetchCandidates();
                 alert("Data seeded successfully.");
             } catch (error) {
                 console.error("Error seeding data:", error);
@@ -211,7 +209,6 @@ export const AdminPanelPage: React.FC = () => {
             setNewDescription("");
             setImageFile(null);
             setShowAddForm(false);
-            await fetchCandidates();
             alert("Candidate added successfully!");
         } catch (error) {
             console.error("Error adding candidate:", error);
@@ -236,7 +233,6 @@ export const AdminPanelPage: React.FC = () => {
         try {
             await updateCandidate(editingCandidate.id, editName, editDescription, imageFile);
             setEditingCandidate(null);
-            await fetchCandidates();
             alert("Candidate updated successfully!");
         } catch (error) {
             console.error("Error updating candidate:", error);

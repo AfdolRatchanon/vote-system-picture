@@ -1,8 +1,15 @@
 # My Vote — ระบบโหวตแบบ Real-time
 
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![React](https://img.shields.io/badge/React-19-61dafb)
+![Firebase](https://img.shields.io/badge/Firebase-11-orange)
+
 ระบบโหวตออนไลน์แบบ Real-time สร้างด้วย **React 19**, **TypeScript** และ **Firebase** ธีม Minecraft pixel art พร้อม Live Dashboard, ระบบ Reaction และแผงควบคุม Admin ครบครัน
 
 > พัฒนาสำหรับงาน **ครบรอบ 30 ปี SBAC** ในฐานะส่วนหนึ่งของ WebAppDev Workshop
+
+ดูประวัติการอัปเดตทั้งหมดได้ที่ [CHANGELOG.md](CHANGELOG.md)
 
 ---
 

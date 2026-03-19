@@ -11,7 +11,8 @@ import {
     addDoc,
     deleteDoc,
     limit,
-    where
+    where,
+    setDoc
 } from "firebase/firestore";
 import {
     ref,
@@ -24,6 +25,8 @@ import type { Candidate, Reaction } from "../types";
 
 const CANDIDATES_COLLECTION = "candidates";
 const VOTES_COLLECTION = "votes";
+const SETTINGS_COLLECTION = "settings";
+const CONFIG_DOC_ID = "config";
 
 export const getCandidates = async (): Promise<Candidate[]> => {
     const q = query(collection(db, CANDIDATES_COLLECTION));
@@ -47,14 +50,16 @@ export const submitVote = async (userId: string, candidateIds: string[]) => {
     }
 
     const voteRef = doc(db, VOTES_COLLECTION, userId);
+    const configRef = doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID);
 
     await runTransaction(db, async (transaction) => {
         // 1. READ ALL DATA FIRST
-        const voteDocPromise = transaction.get(voteRef);
         const candidateRefs = candidateIds.map(cid => doc(db, CANDIDATES_COLLECTION, cid));
-        const candidateDocsPromise = Promise.all(candidateRefs.map(ref => transaction.get(ref)));
-
-        const [voteDoc, candidateDocs] = await Promise.all([voteDocPromise, candidateDocsPromise]);
+        const [voteDoc, configDoc, ...candidateDocs] = await Promise.all([
+            transaction.get(voteRef),
+            transaction.get(configRef),
+            ...candidateRefs.map(ref => transaction.get(ref))
+        ]);
 
         // 2. PERFORM CHECKS
         if (voteDoc.exists()) {
@@ -75,14 +80,17 @@ export const submitVote = async (userId: string, candidateIds: string[]) => {
         }
 
         // 3. PERFORM WRITES
-        // Increment counts
+        // Increment vote counts on candidates
         for (let i = 0; i < candidateDocs.length; i++) {
             const docSnapshot = candidateDocs[i];
             const ref = candidateRefs[i];
-
             const newVoteCount = (docSnapshot.data()?.voteCount || 0) + 1;
             transaction.update(ref, { voteCount: newVoteCount });
         }
+
+        // Increment voterCount counter in config (1 read instead of full votes collection)
+        const currentVoterCount = configDoc.exists() ? (configDoc.data().voterCount ?? 0) : 0;
+        transaction.set(configRef, { voterCount: currentVoterCount + 1 }, { merge: true });
 
         // Create vote record
         transaction.set(voteRef, {
@@ -168,6 +176,10 @@ export const resetAllVotes = async (shouldArchive: boolean = false) => {
     if (operationCount > 0) {
         await batch.commit();
     }
+
+    // 3. Reset voterCount counter in config
+    const configRef = doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID);
+    await setDoc(configRef, { voterCount: 0 }, { merge: true });
 };
 
 export const deleteAllCandidates = async () => {
@@ -297,9 +309,36 @@ export const seedCandidates = async () => {
     await batch.commit();
 };
 
+const compressImage = (file: File, maxWidth = 800, quality = 0.8): Promise<File> => {
+    return new Promise((resolve) => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d")!;
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            const scale = Math.min(1, maxWidth / img.width);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(
+                (blob) => {
+                    const compressedName = file.name.replace(/\.[^.]+$/, ".jpg");
+                    resolve(new File([blob!], compressedName, { type: "image/jpeg" }));
+                },
+                "image/jpeg",
+                quality
+            );
+        };
+        img.src = url;
+    });
+};
+
 export const uploadImage = async (file: File): Promise<string> => {
-    const storageRef = ref(storage, `candidates/${Date.now()}_${file.name}`);
-    const snapshot = await uploadBytes(storageRef, file);
+    const compressed = await compressImage(file);
+    const storageRef = ref(storage, `candidates/${Date.now()}_${compressed.name}`);
+    const snapshot = await uploadBytes(storageRef, compressed);
     return getDownloadURL(snapshot.ref);
 };
 
@@ -438,79 +477,34 @@ export const subscribeToReactions = (callback: (reaction: Reaction) => void) => 
     });
 };
 
-const SETTINGS_COLLECTION = "settings";
-const CONFIG_DOC_ID = "config";
-
 export const toggleUserSubmission = async (isEnabled: boolean) => {
     const configRef = doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID);
-    await runTransaction(db, async (transaction) => {
-        const configDoc = await transaction.get(configRef);
-        if (!configDoc.exists()) {
-            transaction.set(configRef, { allowUserSubmission: isEnabled });
-        } else {
-            transaction.update(configRef, { allowUserSubmission: isEnabled });
-        }
-    });
+    await setDoc(configRef, { allowUserSubmission: isEnabled }, { merge: true });
 };
 
 export const toggleVoting = async (isEnabled: boolean) => {
     const configRef = doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID);
-    await runTransaction(db, async (transaction) => {
-        const configDoc = await transaction.get(configRef);
-        if (!configDoc.exists()) {
-            transaction.set(configRef, { allowVoting: isEnabled });
-        } else {
-            transaction.update(configRef, { allowVoting: isEnabled });
-        }
-    });
+    await setDoc(configRef, { allowVoting: isEnabled }, { merge: true });
 };
 
 export const toggleShowResults = async (isVisible: boolean) => {
     const configRef = doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID);
-    await runTransaction(db, async (transaction) => {
-        const configDoc = await transaction.get(configRef);
-        if (!configDoc.exists()) {
-            transaction.set(configRef, { showResults: isVisible });
-        } else {
-            transaction.update(configRef, { showResults: isVisible });
-        }
-    });
+    await setDoc(configRef, { showResults: isVisible }, { merge: true });
 };
 
 export const toggleReactions = async (isEnabled: boolean) => {
     const configRef = doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID);
-    await runTransaction(db, async (transaction) => {
-        const configDoc = await transaction.get(configRef);
-        if (!configDoc.exists()) {
-            transaction.set(configRef, { allowReactions: isEnabled });
-        } else {
-            transaction.update(configRef, { allowReactions: isEnabled });
-        }
-    });
+    await setDoc(configRef, { allowReactions: isEnabled }, { merge: true });
 };
 
 export const toggleSounds = async (isEnabled: boolean) => {
     const configRef = doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID);
-    await runTransaction(db, async (transaction) => {
-        const configDoc = await transaction.get(configRef);
-        if (!configDoc.exists()) {
-            transaction.set(configRef, { allowSounds: isEnabled });
-        } else {
-            transaction.update(configRef, { allowSounds: isEnabled });
-        }
-    });
+    await setDoc(configRef, { allowSounds: isEnabled }, { merge: true });
 };
 
 export const setTotalEligibleVoters = async (count: number) => {
     const configRef = doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID);
-    await runTransaction(db, async (transaction) => {
-        const configDoc = await transaction.get(configRef);
-        if (!configDoc.exists()) {
-            transaction.set(configRef, { totalEligibleVoters: count });
-        } else {
-            transaction.update(configRef, { totalEligibleVoters: count });
-        }
-    });
+    await setDoc(configRef, { totalEligibleVoters: count }, { merge: true });
 };
 
 export const subscribeToSystemConfig = (callback: (config: { allowUserSubmission: boolean; allowVoting: boolean; showResults: boolean; totalEligibleVoters: number; allowReactions: boolean; allowSounds: boolean }) => void) => {
@@ -533,9 +527,9 @@ export const subscribeToSystemConfig = (callback: (config: { allowUserSubmission
 };
 
 export const subscribeToVoterCount = (callback: (count: number) => void) => {
-    const q = query(collection(db, VOTES_COLLECTION));
-    return onSnapshot(q, (snapshot) => {
-        callback(snapshot.size);
+    const configRef = doc(db, SETTINGS_COLLECTION, CONFIG_DOC_ID);
+    return onSnapshot(configRef, (snapshot) => {
+        callback(snapshot.exists() ? (snapshot.data().voterCount ?? 0) : 0);
     });
 };
 
