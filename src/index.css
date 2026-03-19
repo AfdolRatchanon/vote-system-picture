@@ -1,0 +1,167 @@
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --font-pixel: 'VT323', monospace;
+}
+
+:root {
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  font-size: 16px;
+
+  /* Festive Minecraft Palette - 30 Year SBAC Celebration Theme */
+  --mc-bg: #2a1f3d; /* Deep Purple - Festive Night Sky */
+  --mc-card: #4a4a4a; /* Stone Grey */
+  --mc-primary: #1e88e5; /* Royal Blue */
+  --mc-primary-dark: #1565c0;
+  --mc-success: #4ade80; /* Emerald Green */
+  --mc-success-dark: #16a34a;
+  --mc-danger: #dc143c; /* Crimson Red */
+  --mc-danger-dark: #b71c1c;
+  --mc-text: #ffffff;
+  --mc-border: #000000;
+  --mc-gold: #ffd700; /* Celebration Gold */
+  --mc-silver: #c0c0c0; /* Silver Accent */
+  --mc-gold-glow: rgba(255, 215, 0, 0.4); /* Gold glow effect */
+}
+
+.sbac-text {
+  font-family: var(--font-pixel);
+  color: var(--mc-gold); /* Solid Gold */
+  text-shadow: 
+    /* Blue outline */
+    -2px -2px 0px var(--mc-primary),
+    2px -2px 0px var(--mc-primary),
+    -2px 2px 0px var(--mc-primary),
+    2px 2px 0px var(--mc-primary),
+    /* Black outline for depth */
+    -3px -3px 0px rgba(0, 0, 0, 0.8),
+    3px 3px 0px rgba(0, 0, 0, 0.8),
+    /* Gold glow */
+    0px 0px 20px var(--mc-gold),
+    0px 0px 40px var(--mc-gold-glow),
+    0px 0px 60px var(--mc-gold-glow);
+  letter-spacing: 3px;
+  animation: goldPulse 3s ease-in-out infinite;
+}
+
+@keyframes goldPulse {
+  0%, 100% {
+    filter: drop-shadow(0px 0px 15px var(--mc-gold-glow));
+  }
+  50% {
+    filter: drop-shadow(0px 0px 30px var(--mc-gold));
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--mc-bg);
+  background-image: 
+    /* Festive sparkles */
+    radial-gradient(circle at 20% 30%, var(--mc-gold-glow) 1px, transparent 1px),
+    radial-gradient(circle at 80% 70%, var(--mc-gold-glow) 1px, transparent 1px),
+    radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    radial-gradient(circle at 60% 20%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    /* Grid pattern */
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 
+    200px 200px,
+    200px 200px,
+    150px 150px,
+    150px 150px,
+    40px 40px,
+    40px 40px;
+  background-position:
+    0 0,
+    100px 100px,
+    50px 50px,
+    150px 150px,
+    0 0,
+    0 0;
+  color: var(--mc-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-pixel {
+  font-family: var(--font-pixel);
+}
+
+.pixel-art {
+  filter: drop-shadow(0px 0px 0px rgba(255, 255, 255, 0.4)) 
+          drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.5))
+          drop-shadow(0px 0px 8px rgba(255, 255, 255, 0.5));
+}
+
+/* Minecraft Pixel Border Utility */
+.mc-border {
+  box-shadow: 
+    inset 2px 2px 0px 0px rgba(255,255,255,0.2),
+    inset -2px -2px 0px 0px rgba(0,0,0,0.4),
+    2px 2px 0px 0px rgba(0,0,0,0.5);
+  border: 2px solid #000;
+}
+
+.mc-btn {
+  border: 2px solid #000;
+  box-shadow: 
+    inset 2px 2px 0px 0px rgba(255,255,255,0.4),
+    inset -2px -2px 0px 0px rgba(0,0,0,0.4),
+    2px 4px 0px 0px rgba(0,0,0,0.6);
+  transition: all 0.1s;
+}
+
+.mc-btn:active {
+  transform: translateY(2px);
+  box-shadow: 
+    inset 2px 2px 0px 0px rgba(0,0,0,0.4),
+    inset -2px -2px 0px 0px rgba(255,255,255,0.4),
+    0px 0px 0px 0px rgba(0,0,0,0.6);
+}
+
+@keyframes swing {
+  0%, 100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+.animate-swing {
+  animation: swing 3s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* 3D Gradient Chart Styles */
+.chart-bar-3d {
+  position: relative;
+  background: linear-gradient(180deg, #ffd700 0%, #ffed4e 30%, #1e88e5 70%, #0d47a1 100%);
+  box-shadow: 
+    inset 2px 2px 8px rgba(255, 255, 255, 0.4),
+    inset -2px -2px 8px rgba(0, 0, 0, 0.3),
+    4px 4px 12px rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(0, 0, 0, 0.6);
+}
+
+.chart-bar-3d-red {
+  background: linear-gradient(180deg, #ff1744 0%, #f44336 30%, #dc143c 70%, #b71c1c 100%);
+}
+
+.chart-bar-3d::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+  pointer-events: none;
+}

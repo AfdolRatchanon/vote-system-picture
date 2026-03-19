@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email != null; // Basic check, ideally use custom claims or specific email list
+    }
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user submission is enabled in settings
+    function isUserSubmissionEnabled() {
+      return get(/databases/$(database)/documents/settings/config).data.allowUserSubmission == true;
+    }
+
+    match /settings/config {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /candidates/{candidateId} {
+      allow read: if true;
+      allow delete: if isAdmin();
+      
+      // Allow create if Admin OR if User Submission is enabled
+      allow create: if isAdmin() || (isAuthenticated() && isUserSubmissionEnabled());
+      
+      allow update: if isAdmin() || 
+        // 1. Owner can update their own candidate (Name, Description, Image)
+        // BUT prevent them from changing voteCount or userId
+        (isAuthenticated() && resource.data.userId == request.auth.uid && 
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['voteCount', 'userId'])) ||
+        
+        // 2. Voting logic: allow updating ONLY voteCount (increment by 1)
+        (isAuthenticated() &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['voteCount']) &&
+         request.resource.data.voteCount == resource.data.voteCount + 1
+        );
+    }
+
+    match /votes/{userId} {
+      // User can read their own vote, Admin can read all
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      // User can create/write their own vote
+      allow create, update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAdmin();
+    }
+
+    match /reactions/{reactionId} {
+      allow read: if true;
+      allow create: if true;
+      allow delete: if true; 
+    }
+
+    // NEW: Sound Board Rules
+    match /sounds/{soundId} {
+      allow read: if true;
+      allow create: if true;
+      allow delete: if true; 
+    }
+    
+    match /history/{document=**} {
+       allow read, write: if isAdmin();
+    }
+  }
+}
